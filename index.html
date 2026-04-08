@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Golf Mate</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b3d2e">
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+  <style>
+    body {
+      font-family: Arial;
+      text-align: center;
+      background: #0b3d2e;
+      color: white;
+      padding: 15px;
+    }
+
+    h1 { margin-bottom: 5px; }
+
+    .question {
+      margin: 20px 0;
+    }
+
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    button {
+      font-size: 22px;
+      padding: 15px 25px;
+      border-radius: 12px;
+      border: none;
+      min-width: 100px;
+    }
+
+    .yes { background: #2ecc71; }
+    .no { background: #e74c3c; }
+
+    .selected {
+      outline: 4px solid white;
+      transform: scale(1.05);
+    }
+
+    .next { background: #3498db; margin-top: 20px; }
+    .reset { background: #555; }
+
+    .controls {
+      margin-top: 20px;
+    }
+
+    .hole {
+      font-size: 18px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🏌️ Golf Mate</h1>
+<p class="hole">Hole <span id="hole">1</span> • Shot <span id="shot">1</span></p>
+
+<div class="question">
+  <p>Stance correct?</p>
+  <div class="buttons">
+    <button id="stance-yes" class="yes" onclick="answer('stance', true)">✅</button>
+    <button id="stance-no" class="no" onclick="answer('stance', false)">❌</button>
+  </div>
+</div>
+
+<div class="question">
+  <p>Takeaway good?</p>
+  <div class="buttons">
+    <button id="takeaway-yes" class="yes" onclick="answer('takeaway', true)">✅</button>
+    <button id="takeaway-no" class="no" onclick="answer('takeaway', false)">❌</button>
+  </div>
+</div>
+
+<div class="question">
+  <p>Finish good?</p>
+  <div class="buttons">
+    <button id="finish-yes" class="yes" onclick="answer('finish', true)">✅</button>
+    <button id="finish-no" class="no" onclick="answer('finish', false)">❌</button>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="next" onclick="nextShot()">Next Shot</button>
+  <button class="next" onclick="nextHole()">Next Hole</button>
+  <button class="reset" onclick="reset()">Reset</button>
+</div>
+
+<h2>Stats</h2>
+<p id="stats"></p>
+
+<script>
+let data = JSON.parse(localStorage.getItem("golfData")) || [];
+let shot = parseInt(localStorage.getItem("shot")) || 1;
+let hole = parseInt(localStorage.getItem("hole")) || 1;
+
+let current = { stance: null, takeaway: null, finish: null };
+
+document.getElementById("shot").innerText = shot;
+document.getElementById("hole").innerText = hole;
+
+function answer(type, value) {
+  current[type] = value;
+
+  // Remove previous selection
+  document.getElementById(type + "-yes").classList.remove("selected");
+  document.getElementById(type + "-no").classList.remove("selected");
+
+  // Highlight selected
+  document.getElementById(type + "-" + (value ? "yes" : "no")).classList.add("selected");
+}
+
+function nextShot() {
+  if (Object.values(current).includes(null)) {
+    alert("Answer all 3 first!");
+    return;
+  }
+
+  data.push({ ...current, hole });
+
+  current = { stance: null, takeaway: null, finish: null };
+  clearSelections();
+
+  shot++;
+  save();
+  updateDisplay();
+}
+
+function nextHole() {
+  hole++;
+  shot = 1;
+  save();
+  updateDisplay();
+}
+
+function clearSelections() {
+  ["stance", "takeaway", "finish"].forEach(type => {
+    document.getElementById(type + "-yes").classList.remove("selected");
+    document.getElementById(type + "-no").classList.remove("selected");
+  });
+}
+
+function updateDisplay() {
+  document.getElementById("shot").innerText = shot;
+  document.getElementById("hole").innerText = hole;
+  updateStats();
+}
+
+function updateStats() {
+  const total = data.length;
+
+  const calc = (key) => {
+    const yes = data.filter(d => d[key]).length;
+    return total ? Math.round((yes / total) * 100) : 0;
+  };
+
+  document.getElementById("stats").innerHTML = `
+    Stance: ${calc('stance')}% ✅ <br>
+    Takeaway: ${calc('takeaway')}% ✅ <br>
+    Finish: ${calc('finish')}% ✅ <br><br>
+    Total Shots: ${total}
+  `;
+}
+
+function save() {
+  localStorage.setItem("golfData", JSON.stringify(data));
+  localStorage.setItem("shot", shot);
+  localStorage.setItem("hole", hole);
+}
+
+function reset() {
+  if (!confirm("Reset everything?")) return;
+
+  data = [];
+  shot = 1;
+  hole = 1;
+  localStorage.clear();
+
+  updateDisplay();
+}
+
+updateStats();
+</script>
+
+</body>
+</html>
